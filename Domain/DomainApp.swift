@@ -11,8 +11,8 @@ import SwiftUI
 struct DomainApp: App {
     var body: some Scene {
         WindowGroup {
-            //ContentView()
-            test()
+            ContentView()
+            //test()
         }
     }
 }

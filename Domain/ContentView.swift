@@ -134,7 +134,18 @@ struct ContentView: View {
                         .padding(.bottom, 24)
                         
                         Button(action: {
-                           
+                            
+                            let input = textBindingManager.text.map {$0}
+                            var mask = ""
+                            for (index, _) in input.enumerated() {
+                                if (input[index] == ""){
+                                    mask = mask + "*"
+                                } else {
+                                    mask = mask + input[index]
+                                }
+                            }
+                            
+                            print(mask)
                             
                             Api().getPosts(mask: "as*", zone: "ru", length: "3") { (domains) in
                                 self.domainNames = domains.response.items.map {$0.domain}
