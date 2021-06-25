@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+// Обработка вводимых симовлов в строку домен
 class TextBindingManager: ObservableObject {
     @Published var text: [String] = ["", "", "", "", ""] {
         didSet {
@@ -29,37 +30,38 @@ class TextBindingManager: ObservableObject {
 }
 
 struct ContentView: View {
-    @State var domain: [String] = ["","","", "", ""]
+    // textFields with params(max length: 1)
+    @ObservedObject var textBindingManager = TextBindingManager(limit: 1)
     
-    @State var isShowFilter = false
+    // main screen State
     @State var screen = UIScreen.main.bounds.size
     
+    // filter view data
+    @State var isShowFilter = false
+    @State var filterViewState = CGSize.zero
+    
+    // filter state
     @State var filterDash = false
     @State var filterNumber = false
     @State var filterWords = false
     @State var filterFree = false
     
-    @State var domainLength = 3
-    
-    @State var history = [""]
-    
+    //  Data from server
     @State var domainNames = [String]()
     @State var damainCountResult = 0
     
-    @ObservedObject var textBindingManager = TextBindingManager(limit: 1)
     
-    @State var viewState = CGSize.zero
-    
-    @State var isFind = false
-    @State var viewDomains = CGSize.zero
-    
+    // select domainzone
     @State var selectedDomainZone = ""
     
-    
+    // result data
     @State var searchLength = ""
     @State var searchDomainName = ""
     @State var searchZone = ""
+    @State var viewDomains = CGSize.zero
+    @State var isFind = false
     
+    // loader state
     @State var isLoading = false
     
     
@@ -68,40 +70,8 @@ struct ContentView: View {
         ZStack {
             ZStack (alignment: .bottom) {
                 VStack {
-                    HStack {
-                        Text("История поиска")
-                            .font(.system(size: 24, weight: .bold))
-                            .fontWeight(.bold)
-                        Spacer()
-                    }
-                    .padding([.leading, .bottom, .trailing], 24)
-                    .padding(.top, 32)
                     
-                    if (history.count > 0) {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack (spacing: 8) {
-                                ForEach(0 ..< 5) { item in
-                                    HistoryCard()
-                                }
-                                Button(action: /*@START_MENU_TOKEN@*/{}/*@END_MENU_TOKEN@*/, label: {
-                                    Text("Показать все").foregroundColor(.black)
-                                })
-                                .frame(width: 146, height: 95)
-                                .background(Color.white)
-                                .cornerRadius(8)
-                            }
-                            .padding(.horizontal, 21)
-                        }
-                        .padding(.bottom, 64)
-                    } else {
-                        HStack {
-                            Text("История пока пуста")
-                                .padding(.bottom, 64)
-                                .padding(.horizontal, 24)
-                            Spacer()
-                        }
-                    }
-                    
+                    HistoryView()
                     
                     
                     ZStack (alignment: .top) {
@@ -198,7 +168,7 @@ struct ContentView: View {
                                 Text("Длина")
                                     .font(.system(size: 15, weight: .light))
                                     .foregroundColor(Color(#colorLiteral(red: 0.4, green: 0.4, blue: 0.4, alpha: 1)))
-                                DropDownDomainLength(selected: $textBindingManager.domainLength, domains: $domain)
+                                DropDownDomainLength(selected: $textBindingManager.domainLength, domains: $textBindingManager.text)
                                     .font(.system(size: 15, weight: .light))
                                     .foregroundColor(Color(#colorLiteral(red: 0.4, green: 0.4, blue: 0.4, alpha: 1)))
                             }
@@ -210,8 +180,6 @@ struct ContentView: View {
                         
                     }
                     Spacer()
-                    
-                    
                 }
                 .frame(maxWidth: .infinity)
                 
@@ -264,8 +232,6 @@ struct ContentView: View {
                 }
                 .padding(.top, 32)
                 .padding(.horizontal, 24)
-                
-                
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(#colorLiteral(red: 0.9803921569, green: 0.9803921569, blue: 0.9803921569, alpha: 1)))
                 .cornerRadius(20)
@@ -299,7 +265,7 @@ struct ContentView: View {
                             filterNumber: $filterNumber,
                             filterWords: $filterWords,
                             filterFree: $filterFree,
-                            dragSize: $viewState
+                            dragSize: $filterViewState
                         )
                     }
                     .offset(y: isShowFilter ? 0 : screen.height)
@@ -311,13 +277,13 @@ struct ContentView: View {
                 .ignoresSafeArea()
                 .gesture(DragGesture()
                             .onChanged { value in
-                                self.viewState = value.translation
+                                self.filterViewState = value.translation
                             }
                             .onEnded { value in
-                                if (self.viewState.height > 50) {
+                                if (self.filterViewState.height > 50) {
                                     self.isShowFilter = false
                                 }
-                                self.viewState = .zero
+                                self.filterViewState = .zero
                             }
                 )
             }
@@ -431,7 +397,7 @@ struct ContentView: View {
     
     struct DropDownDomainLength: View {
         @State var isExpand = false
-        @State var options = [3, 4, 5]
+        @State var options = [3, 4]
         @Binding var selected: Int
         @Binding var domains: [String]
         @State var test: [String] = []
@@ -625,6 +591,46 @@ struct ContentView: View {
                 }
             }
             
+        }
+    }
+    
+    struct HistoryView: View {
+        @State var history = []
+        
+        var body: some View {
+            HStack {
+                Text("История поиска")
+                    .font(.system(size: 24, weight: .bold))
+                    .fontWeight(.bold)
+                Spacer()
+            }
+            .padding([.leading, .bottom, .trailing], 24)
+            .padding(.top, 32)
+            
+            if (history.count > 0) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack (spacing: 8) {
+                        ForEach(0 ..< 5) { item in
+                            HistoryCard()
+                        }
+                        Button(action: /*@START_MENU_TOKEN@*/{}/*@END_MENU_TOKEN@*/, label: {
+                            Text("Показать все").foregroundColor(.black)
+                        })
+                        .frame(width: 146, height: 95)
+                        .background(Color.white)
+                        .cornerRadius(8)
+                    }
+                    .padding(.horizontal, 21)
+                }
+                .padding(.bottom, 64)
+            } else {
+                HStack {
+                    Text("История пока пуста")
+                        .padding(.bottom, 64)
+                        .padding(.horizontal, 24)
+                    Spacer()
+                }
+            }
         }
     }
 }
