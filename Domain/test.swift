@@ -21,7 +21,7 @@ struct test: View {
         }
         .onAppear() {
             print("loading...")
-            Api().getPosts(mask: "***", zone: "ru", length: "4") { (domains) in
+            Api().getPosts(mask: "***", zone: "ru", length: "4", list: "all") { (domains) in
                 self.domainNames = domains.response.items.map {$0.domain}
                 print(domainNames)
             }

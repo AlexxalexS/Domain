@@ -30,7 +30,7 @@ struct Item: Codable {
 
 class Api {
     let api = "4.noki.cc"
-    func getPosts(mask: String, zone: String, length: String, completion: @escaping(Domains) -> ()) {
+    func getPosts(mask: String, zone: String, length: String, list: String, completion: @escaping(Domains) -> ()) {
         var components = URLComponents()
         components.scheme = "https"
         components.host = api
@@ -38,16 +38,16 @@ class Api {
         components.queryItems = [
             URLQueryItem(name: "mask", value: mask),
             URLQueryItem(name: "zone", value: zone),
-            URLQueryItem(name: "list", value: "all"),
+            URLQueryItem(name: "list", value: list),
             URLQueryItem(name: "offset", value: "0"),
-            URLQueryItem(name: "count", value: "10"),
+            URLQueryItem(name: "count", value: "20"),
             URLQueryItem(name: "length", value: length),
         ]
         //guard let url = URL(string: "https://4.noki.cc/api/get_domains.php?mask=**1&zone=ru&list=all&offset=0&count=10&length=3") else { return }
         
         guard let url = components.url else { return }
         
-        print(url)
+        //print(url)
         
         URLSession.shared.dataTask(with: url) { data, _, _ in
             guard let data = data else { return }

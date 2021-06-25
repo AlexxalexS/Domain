@@ -18,7 +18,6 @@ class TextBindingManager: ObservableObject {
         }
     }
     
-    
     @Published var domainLength = 3
     
     let characterLimit: Int
@@ -45,6 +44,7 @@ struct ContentView: View {
     @State var history = [""]
     
     @State var domainNames = [String]()
+    @State var damainCountResult = 0
     
     @ObservedObject var textBindingManager = TextBindingManager(limit: 1)
     
@@ -53,249 +53,278 @@ struct ContentView: View {
     @State var isFind = false
     @State var viewDomains = CGSize.zero
     
-    //send
+    @State var selectedDomainZone = ""
+    
+    
+    @State var searchLength = ""
+    @State var searchDomainName = ""
+    @State var searchZone = ""
+    
+    @State var isLoading = false
     
     
     
     var body: some View {
-        ZStack (alignment: .bottom) {
-            VStack {
-                HStack {
-                    Text("История поиска")
-                        .font(.system(size: 24, weight: .bold))
-                        .fontWeight(.bold)
-                    Spacer()
-                }
-                .padding([.leading, .bottom, .trailing], 24)
-                .padding(.top, 32)
-                
-                if (history.count > 0) {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack (spacing: 8) {
-                            ForEach(0 ..< 5) { item in
-                                HistoryCard()
-                            }
-                            Button(action: /*@START_MENU_TOKEN@*/{}/*@END_MENU_TOKEN@*/, label: {
-                                Text("Показать все").foregroundColor(.black)
-                            })
-                            .frame(width: 146, height: 95)
-                            .background(Color.white)
-                            .cornerRadius(8)
-                        }
-                        .padding(.horizontal, 21)
-                    }
-                    .padding(.bottom, 64)
-                } else {
+        ZStack {
+            ZStack (alignment: .bottom) {
+                VStack {
                     HStack {
-                        Text("История пока пуста")
-                            .padding(.bottom, 64)
-                            .padding(.horizontal, 24)
+                        Text("История поиска")
+                            .font(.system(size: 24, weight: .bold))
+                            .fontWeight(.bold)
                         Spacer()
                     }
-                }
-                
-                
-                
-                ZStack (alignment: .top) {
-                    VStack {
+                    .padding([.leading, .bottom, .trailing], 24)
+                    .padding(.top, 32)
+                    
+                    if (history.count > 0) {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack (spacing: 8) {
+                                ForEach(0 ..< 5) { item in
+                                    HistoryCard()
+                                }
+                                Button(action: /*@START_MENU_TOKEN@*/{}/*@END_MENU_TOKEN@*/, label: {
+                                    Text("Показать все").foregroundColor(.black)
+                                })
+                                .frame(width: 146, height: 95)
+                                .background(Color.white)
+                                .cornerRadius(8)
+                            }
+                            .padding(.horizontal, 21)
+                        }
+                        .padding(.bottom, 64)
+                    } else {
+                        HStack {
+                            Text("История пока пуста")
+                                .padding(.bottom, 64)
+                                .padding(.horizontal, 24)
+                            Spacer()
+                        }
+                    }
+                    
+                    
+                    
+                    ZStack (alignment: .top) {
                         VStack {
-                            Text("Домен")
-                                .font(.system(size: 15, weight: .light))
-                                .foregroundColor(Color(#colorLiteral(red: 0.4, green: 0.4, blue: 0.4, alpha: 1)))
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                            VStack {
+                                Text("Домен")
+                                    .font(.system(size: 15, weight: .light))
+                                    .foregroundColor(Color(#colorLiteral(red: 0.4, green: 0.4, blue: 0.4, alpha: 1)))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                
+                                HStack {
+                                    ForEach(0 ..< textBindingManager.domainLength, id: \.self) { index in
+                                        TextField("*", text:  $textBindingManager.text[index])
+                                            .frame(height: 70)
+                                            .background(Color(#colorLiteral(red: 0.9490196078, green: 0.9490196078, blue: 0.9490196078, alpha: 1)))
+                                            .multilineTextAlignment(.center)
+                                            .cornerRadius(8)
+                                    }
+                                }
+                                
+                            }
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 36)
                             
                             HStack {
-                                ForEach(0 ..< textBindingManager.domainLength, id: \.self) { index in
-                                    TextField("*", text:  $textBindingManager.text[index])
-                                        .frame(height: 70)
-                                        .background(Color(#colorLiteral(red: 0.9490196078, green: 0.9490196078, blue: 0.9490196078, alpha: 1)))
-                                        .multilineTextAlignment(.center)
-                                        .cornerRadius(8)
-                                }
+                                Button(action: {
+                                    isShowFilter.toggle()
+                                }, label: {
+                                    Image("filter")
+                                    Text("Фильтры")
+                                        .font(.system(size: 15, weight: .light))
+                                        .foregroundColor(Color.black)
+                                })
+                                
+                                Spacer()
                             }
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 24)
                             
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 36)
-                        
-                        HStack {
                             Button(action: {
-                                isShowFilter.toggle()
-                            }, label: {
-                                Image("filter")
-                                Text("Фильтры")
-                                    .font(.system(size: 15, weight: .light))
-                                    .foregroundColor(Color.black)
-                            })
-                            
-                            Spacer()
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 24)
-                        
-                        Button(action: {
-                            
-                            let input = textBindingManager.text.map {$0}
-                            var mask = ""
-                            for (index, _) in input.enumerated() {
-                                if (input[index] == ""){
-                                    mask = mask + "*"
-                                } else {
-                                    mask = mask + input[index]
+                                isLoading = true
+                                let input = textBindingManager.text.map {$0}
+                                var mask = ""
+                                for (index, _) in input.enumerated() {
+                                    if (index < textBindingManager.domainLength){
+                                        if (input[index] == ""){
+                                            mask = mask + "*"
+                                        } else {
+                                            mask = mask + input[index]
+                                        }
+                                    }
                                 }
+                                
+                                //print(mask)
+                                var list = "all"
+                                if (filterFree) {
+                                    list = "free"
+                                }
+                                
+                                Api().getPosts(mask: mask, zone: selectedDomainZone, length: String(textBindingManager.domainLength), list: list) { (domains) in
+                                    self.domainNames = domains.response.items.map {$0.domain}
+                                    self.damainCountResult = domains.response.count
+                                    //print(self.domainNames)
+                                    isFind = true
+                                    viewDomains.height = screen.height - 200
+                                    
+                                    searchLength = String(textBindingManager.domainLength)
+                                    searchZone = selectedDomainZone
+                                    searchDomainName = mask
+                                    isLoading = false
+                                }
+                                
+                                
+                                
+                            }, label: {
+                                Text("Найти")
+                            })
+                            .frame(width: 328, height: 48, alignment: .center)
+                            .background(Color.black)
+                            .foregroundColor(.white)
+                            .font(.system(size: 17, weight: .bold))
+                            .cornerRadius(8)
+                        }
+                        .offset(y: 100)
+                        HStack (alignment: .top) {
+                            VStack (alignment: .leading) {
+                                Text("Доменная зона")
+                                    .font(.system(size: 15, weight: .light))
+                                    .foregroundColor(Color(#colorLiteral(red: 0.4, green: 0.4, blue: 0.4, alpha: 1)))
+                                DropDownDomainZone(selected: self.$selectedDomainZone)
                             }
-                            
-                            print(mask)
-                            
-                            Api().getPosts(mask: "as*", zone: "ru", length: "3") { (domains) in
-                                self.domainNames = domains.response.items.map {$0.domain}
-                                isFind = true
-                                viewDomains.height = screen.height - 200
+                            Spacer()
+                            VStack (alignment: .leading) {
+                                Text("Длина")
+                                    .font(.system(size: 15, weight: .light))
+                                    .foregroundColor(Color(#colorLiteral(red: 0.4, green: 0.4, blue: 0.4, alpha: 1)))
+                                DropDownDomainLength(selected: $textBindingManager.domainLength, domains: $domain)
+                                    .font(.system(size: 15, weight: .light))
+                                    .foregroundColor(Color(#colorLiteral(red: 0.4, green: 0.4, blue: 0.4, alpha: 1)))
                             }
-                            
-                            
-                            
-                        }, label: {
-                            Text("Найти")
-                        })
-                        .frame(width: 328, height: 48, alignment: .center)
-                        .background(Color.black)
-                        .foregroundColor(.white)
-                        .font(.system(size: 17, weight: .bold))
-                        .cornerRadius(8)
-                    }
-                    .offset(y: 100)
-                    HStack (alignment: .top) {
-                        VStack (alignment: .leading) {
-                            Text("Доменная зона")
-                                .font(.system(size: 15, weight: .light))
-                                .foregroundColor(Color(#colorLiteral(red: 0.4, green: 0.4, blue: 0.4, alpha: 1)))
-                            DropDownDomainZone()
-                        }
-                        Spacer()
-                        VStack (alignment: .leading) {
-                            Text("Длина")
-                                .font(.system(size: 15, weight: .light))
-                                .foregroundColor(Color(#colorLiteral(red: 0.4, green: 0.4, blue: 0.4, alpha: 1)))
-                            DropDownDomainLength(selected: $textBindingManager.domainLength, domains: $domain)
-                                .font(.system(size: 15, weight: .light))
-                                .foregroundColor(Color(#colorLiteral(red: 0.4, green: 0.4, blue: 0.4, alpha: 1)))
-                        }
-                        Spacer()
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 24)
-                    //.padding(.bottom, 32)
-                    
-                }
-                Spacer()
-                
-                
-            }
-            .frame(maxWidth: .infinity)
-            VStack {
-                Spacer()
-                HStack {
-                    FilterSheet(
-                        isShowFilter: $isShowFilter,
-                        filterDash: $filterDash,
-                        filterNumber: $filterNumber,
-                        filterWords: $filterWords,
-                        filterFree: $filterFree,
-                        dragSize: $viewState
-                    )
-                }
-                .offset(y: isShowFilter ? 0 : screen.height)
-                .animation(.easeInOut)
-            }
-            .frame(height: .infinity, alignment: .bottom)
-            .frame(maxHeight: .infinity)
-            .background(isShowFilter ? Color.black.opacity(0.3) : Color.clear)
-            .ignoresSafeArea()
-            .gesture(DragGesture()
-                        .onChanged { value in
-                            self.viewState = value.translation
-                        }
-                        .onEnded { value in
-                            if (self.viewState.height > 50) {
-                                self.isShowFilter = false
-                            }
-                            self.viewState = .zero
-                        }
-            )
-            VStack {
-                HStack {
-                    VStack(alignment: .leading){
-                        Text("Длина").font(.system(size: 15)).padding(.bottom, 2)
-                        Text("3").font(.system(size: 24, weight: .bold))
-                    }.padding(.trailing, 20)
-                    VStack(alignment: .leading){
-                        Text("Запрос").font(.system(size: 15)).padding(.bottom, 2)
-                        Text("h").font(.system(size: 24, weight: .bold))
-                    }.padding(.trailing, 20)
-                    VStack(alignment: .leading){
-                        Text("Зона").font(.system(size: 15)).padding(.bottom, 2)
-                        Text(".com").font(.system(size: 24, weight: .bold))
-                    }
-                    Spacer()
-                    if (viewDomains.height != screen.height - 200) {
-                        Button(action: {
-                            viewDomains.height = screen.height - 200
-                        }, label: {
-                            Image("close-gray")
-                        })
-                    }
-                    
-                }.padding(.bottom, 24)
-                
-                HStack {
-                    Text("16001 результатов")
-                    Spacer()
-                }
-                .padding(.bottom, 16)
-                
-                ScrollView(showsIndicators: false) {
-                    ForEach(domainNames, id: \.self) { domain in
-                        HStack {
-                            Text("\(domain)").font(.system(size: 17, weight: .semibold))
                             Spacer()
                         }
-                        .padding(.horizontal ,24)
-                        .padding(.vertical, 16)
-                        .background(Color.white)
-                        .cornerRadius(8)
-                        .padding(.bottom, 16)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 24)
+                        //.padding(.bottom, 32)
+                        
                     }
+                    Spacer()
+                    
+                    
                 }
-                Spacer()
-            }
-            .padding(.top, 32)
-            .padding(.horizontal, 24)
-            
-            
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(#colorLiteral(red: 0.9803921569, green: 0.9803921569, blue: 0.9803921569, alpha: 1)))
-            .cornerRadius(20)
-            .ignoresSafeArea(edges: .bottom)
-            .offset(y: isFind ? 0 : screen.height)
-            .offset(y: viewDomains.height)
-            .animation(.spring(response: 0.2, dampingFraction: 0.5, blendDuration: 0))
-            .onTapGesture {
-                self.viewDomains = .zero
-            }
-            .gesture(DragGesture()
-                        .onChanged { value in
-                            self.viewDomains = value.translation
+                .frame(maxWidth: .infinity)
+                
+                // search result
+                VStack {
+                    HStack {
+                        VStack(alignment: .leading){
+                            Text("Длина").font(.system(size: 15)).padding(.bottom, 2)
+                            Text("\(searchLength)").font(.system(size: 24, weight: .bold))
+                        }.padding(.trailing, 20)
+                        VStack(alignment: .leading){
+                            Text("Запрос").font(.system(size: 15)).padding(.bottom, 2)
+                            Text("\(searchDomainName)").font(.system(size: 24, weight: .bold))
+                        }.padding(.trailing, 20)
+                        VStack(alignment: .leading){
+                            Text("Зона").font(.system(size: 15)).padding(.bottom, 2)
+                            Text("\(searchZone)").font(.system(size: 24, weight: .bold))
                         }
-                        .onEnded { value in
-                            if (self.viewDomains.height > 50) {
+                        Spacer()
+                        if (viewDomains.height != screen.height - 200) {
+                            Button(action: {
                                 viewDomains.height = screen.height - 200
-                            } else {
-                                self.viewDomains = .zero
-                            }
-                           
+                            }, label: {
+                                Image("close-gray")
+                            })
                         }
-            )
+                        
+                    }.padding(.bottom, 24)
+                    
+                    HStack {
+                        Text("\(damainCountResult) результатов")
+                        Spacer()
+                    }
+                    .padding(.bottom, 16)
+                    
+                    ScrollView(showsIndicators: false) {
+                        ForEach(domainNames, id: \.self) { domain in
+                            HStack {
+                                Text("\(domain)").font(.system(size: 17, weight: .semibold))
+                                Spacer()
+                            }
+                            .padding(.horizontal ,24)
+                            .padding(.vertical, 16)
+                            .background(Color.white)
+                            .cornerRadius(8)
+                            .padding(.bottom, 16)
+                        }
+                    }
+                    Spacer()
+                }
+                .padding(.top, 32)
+                .padding(.horizontal, 24)
+                
+                
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(#colorLiteral(red: 0.9803921569, green: 0.9803921569, blue: 0.9803921569, alpha: 1)))
+                .cornerRadius(20)
+                .ignoresSafeArea(edges: .bottom)
+                .offset(y: isFind ? 0 : screen.height)
+                .offset(y: viewDomains.height)
+                .animation(.spring(response: 0.2, dampingFraction: 0.5, blendDuration: 0))
+                .onTapGesture {
+                    self.viewDomains = .zero
+                }
+                .gesture(DragGesture()
+                            .onChanged { value in
+                                self.viewDomains = value.translation
+                            }
+                            .onEnded { value in
+                                if (self.viewDomains.height > 50) {
+                                    viewDomains.height = screen.height - 200
+                                } else {
+                                    self.viewDomains = .zero
+                                }
+                                
+                            }
+                )
+                // Filter
+                VStack {
+                    Spacer()
+                    HStack {
+                        FilterSheet(
+                            isShowFilter: $isShowFilter,
+                            filterDash: $filterDash,
+                            filterNumber: $filterNumber,
+                            filterWords: $filterWords,
+                            filterFree: $filterFree,
+                            dragSize: $viewState
+                        )
+                    }
+                    .offset(y: isShowFilter ? 0 : screen.height)
+                    .animation(.easeInOut)
+                }
+                .frame(height: .infinity, alignment: .bottom)
+                .frame(maxHeight: .infinity)
+                .background(isShowFilter ? Color.black.opacity(0.3) : Color.clear)
+                .ignoresSafeArea()
+                .gesture(DragGesture()
+                            .onChanged { value in
+                                self.viewState = value.translation
+                            }
+                            .onEnded { value in
+                                if (self.viewState.height > 50) {
+                                    self.isShowFilter = false
+                                }
+                                self.viewState = .zero
+                            }
+                )
+            }
+            
+            if isLoading {Loader()}
+            
+            
         }
     }
     
@@ -345,7 +374,7 @@ struct ContentView: View {
     struct DropDownDomainZone: View {
         @State var isExpand = false
         @State var options = ["com", "ru", "kz", "net", "org", "me"]
-        @State var selected = ""
+        @Binding var selected: String
         var body: some View {
             ZStack (alignment: .top) {
                 HStack {
@@ -597,5 +626,22 @@ struct ContentView: View {
             }
             
         }
+    }
+}
+
+struct Loader: View {
+    var body: some View {
+        VStack {
+            Text("Загрузка")
+                .font(.largeTitle)
+                .foregroundColor(.white)
+                .padding(.bottom, 30)
+            ProgressView()
+                .scaleEffect(2.5)
+                .progressViewStyle(CircularProgressViewStyle(tint: Color.black))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.black.opacity(0.3))
+        .ignoresSafeArea()
     }
 }
