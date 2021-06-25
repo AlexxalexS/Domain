@@ -29,6 +29,13 @@ class TextBindingManager: ObservableObject {
     }
 }
 
+struct HistoryData: Hashable, Identifiable {
+    let id = UUID()
+    let domain: String
+    let zone: String
+    let length: String
+}
+
 struct ContentView: View {
     // textFields with params(max length: 1)
     @ObservedObject var textBindingManager = TextBindingManager(limit: 1)
@@ -64,17 +71,17 @@ struct ContentView: View {
     // loader state
     @State var isLoading = false
     
-    
+    @State var history = [HistoryData]()
     
     var body: some View {
         ZStack {
             ZStack (alignment: .bottom) {
                 VStack {
                     
-                    HistoryView()
-                    
+                    HistoryView(history: $history)
                     
                     ZStack (alignment: .top) {
+                        // TextFields Domains
                         VStack {
                             VStack {
                                 Text("Домен")
@@ -110,7 +117,7 @@ struct ContentView: View {
                             }
                             .padding(.horizontal, 24)
                             .padding(.bottom, 24)
-                            
+                            // Find Button
                             Button(action: {
                                 isLoading = true
                                 let input = textBindingManager.text.map {$0}
@@ -142,6 +149,9 @@ struct ContentView: View {
                                     searchZone = selectedDomainZone
                                     searchDomainName = mask
                                     isLoading = false
+                                    
+                                    let toHistory = HistoryData(domain: searchDomainName, zone: searchZone, length: searchLength)
+                                    history.append(toHistory)
                                 }
                                 
                                 
@@ -156,6 +166,7 @@ struct ContentView: View {
                             .cornerRadius(8)
                         }
                         .offset(y: 100)
+                        //Select zone and length
                         HStack (alignment: .top) {
                             VStack (alignment: .leading) {
                                 Text("Доменная зона")
@@ -176,8 +187,6 @@ struct ContentView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, 24)
-                        //.padding(.bottom, 32)
-                        
                     }
                     Spacer()
                 }
@@ -287,10 +296,8 @@ struct ContentView: View {
                             }
                 )
             }
-            
+            // loader
             if isLoading {Loader()}
-            
-            
         }
     }
     
@@ -300,42 +307,121 @@ struct ContentView: View {
         }
     }
     
-    struct HistoryCard: View {
+    struct HistoryView: View {
+        @Binding var history: [HistoryData]
+        
         var body: some View {
-            VStack (alignment: .leading) {
-                Text("h00")
-                    .font(.system(size: 20, weight: .bold))
+            HStack {
+                Text("История поиска")
+                    .font(.system(size: 24, weight: .bold))
+                    .fontWeight(.bold)
                 Spacer()
+            }
+            .padding([.leading, .bottom, .trailing], 24)
+            .padding(.top, 32)
+            
+            if (history.count > 0) {
+                
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack (spacing: 8) {
+                        ForEach(history, id: \.id) { item in
+                            VStack (alignment: .leading) {
+                                Text("\(item.domain)")
+                                    .font(.system(size: 20, weight: .bold))
+                                Spacer()
+                                HStack {
+                                    VStack (alignment: .leading) {
+                                        Text("Зона")
+                                            .font(.system(size: 11, weight: .light))
+                                        Text("\(item.zone)")
+                                            .font(.system(size: 12, weight: .medium))
+                                    }
+                                    Spacer()
+                                    VStack (alignment: .leading) {
+                                        Text("Длина")
+                                            .font(.system(size: 11, weight: .light))
+                                        Text("\(item.length)")
+                                            .font(.system(size: 12, weight: .medium))
+                                    }
+                                    Spacer()
+                                }
+                            }
+                            .foregroundColor(.white)
+                            .padding(16)
+                            .frame(width: 146, height: 95, alignment: .leading)
+                            .background(
+                                ZStack {
+                                    LinearGradient(gradient: Gradient(colors: [Color(#colorLiteral(red: 0.6156862745, green: 0.4705882353, blue: 0.8392156863, alpha: 1)), Color(#colorLiteral(red: 0.3058823529, green: 0.2431372549, blue: 0.7058823529, alpha: 1))]), startPoint: .topLeading, endPoint: .bottomTrailing)
+                                    Image("overlay")
+                                }
+                            )
+                            .cornerRadius(8)
+                            //
+                            
+                        }
+                        Button(action: {
+                            print(history[0])
+                        }, label: {
+                            Text("Показать все").foregroundColor(.black)
+                        })
+                        .frame(width: 146, height: 95)
+                        .background(Color.white)
+                        .cornerRadius(8)
+                    }
+                    .padding(.horizontal, 21)
+                }
+                .padding(.bottom, 64)
+            } else {
                 HStack {
-                    VStack (alignment: .leading) {
-                        Text("Зона")
-                            .font(.system(size: 11, weight: .light))
-                        Text(".com")
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                    Spacer()
-                    VStack (alignment: .leading) {
-                        Text("Длина")
-                            .font(.system(size: 11, weight: .light))
-                        Text("4")
-                            .font(.system(size: 12, weight: .medium))
-                    }
+                    Text("История пока пуста")
+                        .padding(.bottom, 64)
+                        .padding(.horizontal, 24)
                     Spacer()
                 }
             }
-            .foregroundColor(.white)
-            .padding(16)
-            .frame(width: 146, height: 95, alignment: .leading)
-            .background(
-                ZStack {
-                    LinearGradient(gradient: Gradient(colors: [Color(#colorLiteral(red: 0.6156862745, green: 0.4705882353, blue: 0.8392156863, alpha: 1)), Color(#colorLiteral(red: 0.3058823529, green: 0.2431372549, blue: 0.7058823529, alpha: 1))]), startPoint: .topLeading, endPoint: .bottomTrailing)
-                    Image("overlay")
-                }
-            )
-            .cornerRadius(8)
-            
         }
     }
+    // Вынести в отдельную структуру (пока не рабоатет)
+//    struct HistoryCard: View {
+//       @Binding var zone: String
+//        @Binding var domain: String
+//        @Binding var length: String
+//
+//        var body: some View {
+//            VStack (alignment: .leading) {
+//                Text("h00")
+//                    .font(.system(size: 20, weight: .bold))
+//                Spacer()
+//                HStack {
+//                    VStack (alignment: .leading) {
+//                        Text("Зона")
+//                            .font(.system(size: 11, weight: .light))
+//                        Text(".com")
+//                            .font(.system(size: 12, weight: .medium))
+//                    }
+//                    Spacer()
+//                    VStack (alignment: .leading) {
+//                        Text("Длина")
+//                            .font(.system(size: 11, weight: .light))
+//                        Text("4")
+//                            .font(.system(size: 12, weight: .medium))
+//                    }
+//                    Spacer()
+//                }
+//            }
+//            .foregroundColor(.white)
+//            .padding(16)
+//            .frame(width: 146, height: 95, alignment: .leading)
+//            .background(
+//                ZStack {
+//                    LinearGradient(gradient: Gradient(colors: [Color(#colorLiteral(red: 0.6156862745, green: 0.4705882353, blue: 0.8392156863, alpha: 1)), Color(#colorLiteral(red: 0.3058823529, green: 0.2431372549, blue: 0.7058823529, alpha: 1))]), startPoint: .topLeading, endPoint: .bottomTrailing)
+//                    Image("overlay")
+//                }
+//            )
+//            .cornerRadius(8)
+//
+//        }
+//    }
     
     struct DropDownDomainZone: View {
         @State var isExpand = false
@@ -591,46 +677,6 @@ struct ContentView: View {
                 }
             }
             
-        }
-    }
-    
-    struct HistoryView: View {
-        @State var history = []
-        
-        var body: some View {
-            HStack {
-                Text("История поиска")
-                    .font(.system(size: 24, weight: .bold))
-                    .fontWeight(.bold)
-                Spacer()
-            }
-            .padding([.leading, .bottom, .trailing], 24)
-            .padding(.top, 32)
-            
-            if (history.count > 0) {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack (spacing: 8) {
-                        ForEach(0 ..< 5) { item in
-                            HistoryCard()
-                        }
-                        Button(action: /*@START_MENU_TOKEN@*/{}/*@END_MENU_TOKEN@*/, label: {
-                            Text("Показать все").foregroundColor(.black)
-                        })
-                        .frame(width: 146, height: 95)
-                        .background(Color.white)
-                        .cornerRadius(8)
-                    }
-                    .padding(.horizontal, 21)
-                }
-                .padding(.bottom, 64)
-            } else {
-                HStack {
-                    Text("История пока пуста")
-                        .padding(.bottom, 64)
-                        .padding(.horizontal, 24)
-                    Spacer()
-                }
-            }
         }
     }
 }
