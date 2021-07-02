@@ -7,6 +7,7 @@
 
 import Foundation
 
+
 struct Domains: Codable {
     let response: Response
 }
@@ -19,7 +20,7 @@ struct Response: Codable {
 struct Item: Codable {
     let domain: String
     let freeAt, checkedAt: String?
-
+    
     enum CodingKeys: String, CodingKey {
         case domain
         case freeAt = "free_at"
@@ -27,6 +28,9 @@ struct Item: Codable {
     }
 }
 
+class IsLoader {
+    @Published var isLoader = false
+}
 
 class Api {
     let api = "4.noki.cc"
@@ -47,16 +51,23 @@ class Api {
         
         guard let url = components.url else { return }
         
-        //print(url)
+        print(url)
         
-        URLSession.shared.dataTask(with: url) { data, _, _ in
+        URLSession.shared.dataTask(with: url) { data, _, error in
+            IsLoader().isLoader = true
+            
+            if error != nil {
+                IsLoader().isLoader = false
+                return
+            }
+            
             guard let data = data else { return }
             
             let domains = try! JSONDecoder().decode(Domains.self, from: data)
-     
+            
             DispatchQueue.main.async {
                 completion(domains)
-                
+                IsLoader().isLoader = false
             }
         }
         .resume()

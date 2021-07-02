@@ -71,14 +71,18 @@ struct ContentView: View {
     // loader state
     @State var isLoading = false
     
+    //history data
     @State var history = [HistoryData]()
+    
+    // show all history
+    @State var showAllHistory = false
     
     var body: some View {
         ZStack {
             ZStack (alignment: .bottom) {
                 VStack {
                     
-                    HistoryView(history: $history)
+                    HistoryView(history: $history, showAllHistory: $showAllHistory)
                     
                     ZStack (alignment: .top) {
                         // TextFields Domains
@@ -119,29 +123,6 @@ struct ContentView: View {
                             .padding(.bottom, 24)
                             // Find Button
                             Button(action: {
-                                let defaults = UserDefaults.standard
-
-                                    let dictionary = defaults.dictionaryRepresentation()
-                                        //print(dictionary)
-                                    dictionary.keys.forEach { key in
-                                        defaults.removeObject(forKey: key)
-                                    }
-                                    print("user defaults - clear")
-                                    history = []
-                                    print("history - clean")
-                            }, label: {
-                                Text("clear userdefaults")
-
-                            })
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            
-                            .padding()
-                            
-                            
-            
-                            Button(action: {
                                 isLoading = true
                                 let input = textBindingManager.text.map {$0}
                                 var mask = ""
@@ -178,50 +159,33 @@ struct ContentView: View {
                                     
                                     let defaults = UserDefaults.standard
                                     if let hasHistory = defaults.object(forKey: "history") as? Data {
-                                        print("has history user defaults")
+                                        //print("has history user defaults")
                                         var data = [HistoryData]()
                                         
                                         let encoder = JSONEncoder()
                                         let decoder = JSONDecoder()
                                         
                                         if let loadedHistory = try? decoder.decode([HistoryData].self, from: hasHistory) {
-                                            print("раскодированы user defaults")
-                                            print(loadedHistory)
+                                            // print("раскодированы user defaults")
+                                            //  print(loadedHistory)
                                             data = loadedHistory
                                         }
                                         
                                         data.append(toHistory)
                                         self.history = data
-  
+                                        
                                         if let encoded = try? encoder.encode(self.history) {
                                             defaults.set(encoded, forKey: "history")
-                                            print("Записано все что есть из self.histor в user defaults")
+                                            // print("Записано все что есть из self.histor в user defaults")
                                         }
                                         
                                     } else {
-                                        print("hasn't history in user defaults")
-                                        let encoder = JSONEncoder()
-                                        if let encoded = try? encoder.encode(toHistory) {
-                                            print("encoded введенных данных")
-                                            defaults.set(encoded, forKey: "history")
-                                            print("данные записаны в user defaults")
-                                        }
+                                        // print("hasn't history in user defaults")
                                         
-                                        // повтор из того, что есть
-                                        if let hasHistory = defaults.object(forKey: "history") as? Data {
-                                            print("has history user defaults")
-                                            let decoder = JSONDecoder()
-                                            if let loadedHistory = try? decoder.decode(HistoryData.self, from: hasHistory) {
-                                                print("раскодированы user defaults")
-                                                self.history.append(loadedHistory)
-                                                print("Записано все что есть в self.histor")
-                                            }
-                                            
-                                            let encoder = JSONEncoder()
-                                            if let encoded = try? encoder.encode(self.history) {
-                                                defaults.set(encoded, forKey: "history")
-                                                print("Записано все что есть из self.histor в user defaults")
-                                            }
+                                        self.history = [toHistory].self
+                                        let encoder = JSONEncoder()
+                                        if let encoded = try? encoder.encode(self.history) {
+                                            defaults.set(encoded, forKey: "history")
                                         }
                                     }
                                 }
@@ -368,6 +332,8 @@ struct ContentView: View {
             }
             // loader
             if isLoading {Loader()}
+            
+            if showAllHistory {AllHistory(history: $history, showAllHistory: $showAllHistory).zIndex(20)}
         }
         .onAppear(){
             let defaults = UserDefaults.standard
@@ -392,6 +358,8 @@ struct ContentView: View {
     
     struct HistoryView: View {
         @Binding var history: [HistoryData]
+        @Binding var showAllHistory: Bool
+        
         
         var body: some View {
             HStack {
@@ -404,46 +372,48 @@ struct ContentView: View {
             .padding(.top, 32)
             
             if (history.count > 0) {
-                
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack (spacing: 8) {
-                        ForEach(history, id: \.id) { item in
-                            VStack (alignment: .leading) {
-                                Text("\(item.domain)")
-                                    .font(.system(size: 20, weight: .bold))
-                                Spacer()
-                                HStack {
-                                    VStack (alignment: .leading) {
-                                        Text("Зона")
-                                            .font(.system(size: 11, weight: .light))
-                                        Text("\(item.zone)")
-                                            .font(.system(size: 12, weight: .medium))
-                                    }
+                        if (history.count < 6) {}
+                        ForEach(history.indices, id: \.self) { item in
+                            if (item < 6){
+                                VStack (alignment: .leading) {
+                                    Text("\(history[item].domain)")
+                                        .font(.system(size: 20, weight: .bold))
                                     Spacer()
-                                    VStack (alignment: .leading) {
-                                        Text("Длина")
-                                            .font(.system(size: 11, weight: .light))
-                                        Text("\(item.length)")
-                                            .font(.system(size: 12, weight: .medium))
+                                    HStack {
+                                        VStack (alignment: .leading) {
+                                            Text("Зона")
+                                                .font(.system(size: 11, weight: .light))
+                                            Text("\(history[item].zone)")
+                                                .font(.system(size: 12, weight: .medium))
+                                        }
+                                        Spacer()
+                                        VStack (alignment: .leading) {
+                                            Text("Длина")
+                                                .font(.system(size: 11, weight: .light))
+                                            Text("\(history[item].length)")
+                                                .font(.system(size: 12, weight: .medium))
+                                        }
+                                        Spacer()
                                     }
-                                    Spacer()
                                 }
+                                .foregroundColor(.white)
+                                .padding(16)
+                                .frame(width: 146, height: 95, alignment: .leading)
+                                .background(
+                                    ZStack {
+                                        LinearGradient(gradient: Gradient(colors: [Color(#colorLiteral(red: 0.6156862745, green: 0.4705882353, blue: 0.8392156863, alpha: 1)), Color(#colorLiteral(red: 0.3058823529, green: 0.2431372549, blue: 0.7058823529, alpha: 1))]), startPoint: .topLeading, endPoint: .bottomTrailing)
+                                        Image("overlay")
+                                    }
+                                )
+                                .cornerRadius(8)
                             }
-                            .foregroundColor(.white)
-                            .padding(16)
-                            .frame(width: 146, height: 95, alignment: .leading)
-                            .background(
-                                ZStack {
-                                    LinearGradient(gradient: Gradient(colors: [Color(#colorLiteral(red: 0.6156862745, green: 0.4705882353, blue: 0.8392156863, alpha: 1)), Color(#colorLiteral(red: 0.3058823529, green: 0.2431372549, blue: 0.7058823529, alpha: 1))]), startPoint: .topLeading, endPoint: .bottomTrailing)
-                                    Image("overlay")
-                                }
-                            )
-                            .cornerRadius(8)
-                            //
+                            //Text("a")
                             
                         }
                         Button(action: {
-                            print(history[0])
+                            showAllHistory.toggle()
                         }, label: {
                             Text("Показать все").foregroundColor(.black)
                         })
@@ -454,6 +424,7 @@ struct ContentView: View {
                     .padding(.horizontal, 21)
                 }
                 .padding(.bottom, 64)
+                
             } else {
                 HStack {
                     Text("История пока пуста")
@@ -464,6 +435,89 @@ struct ContentView: View {
             }
         }
     }
+    
+    struct AllHistory: View {
+        @Binding var history: [HistoryData]
+        @Binding var showAllHistory: Bool
+        var body: some View {
+            
+            VStack {
+                VStack {
+                    HStack{
+                        Button(action: {
+                            showAllHistory = false
+                        }, label: {
+                            Image("back-arrow")
+                        })
+                        
+                        Spacer()
+                        Text("История поиска").font(.title).bold()
+                        Spacer()
+                    }
+                    .padding(.horizontal, 28.0)
+                    .padding(.bottom, 36)
+                    ScrollView {
+                        ForEach(history, id: \.self) { item in
+                            HStack {
+                                VStack(alignment: .leading){
+                                    Text("Длина").font(.system(size: 15)).padding(.bottom, 2)
+                                    Text("\(item.length)").font(.system(size: 24, weight: .bold))
+                                }.padding(.trailing, 20)
+                                VStack(alignment: .leading){
+                                    Text("Запрос").font(.system(size: 15)).padding(.bottom, 2)
+                                    Text("\(item.domain)").font(.system(size: 24, weight: .bold))
+                                }.padding(.trailing, 20)
+                                VStack(alignment: .leading){
+                                    Text("Зона").font(.system(size: 15)).padding(.bottom, 2)
+                                    Text("\(item.zone)").font(.system(size: 24, weight: .bold))
+                                }
+                                Spacer()
+                                Image("back-arrow").rotationEffect(Angle(degrees: 180))
+                            }
+                            
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 16)
+                            
+                        }
+                        .padding(.horizontal, 24)
+                    }
+                    
+                    Button(action: {
+                        let defaults = UserDefaults.standard
+                        
+                        let dictionary = defaults.dictionaryRepresentation()
+                        //print(dictionary)
+                        dictionary.keys.forEach { key in
+                            defaults.removeObject(forKey: key)
+                        }
+                        history = []
+                        showAllHistory = false
+                    }, label: {
+                        Text("Очистить историю")
+                        
+                    })
+                    .padding()
+                    .background(Color.gray.opacity(0.1))
+                    .foregroundColor(.black)
+                    .cornerRadius(16)
+                    
+                    .padding()
+                    
+                    
+                    
+                    
+                    Spacer()
+                }
+                .padding(.top, 44)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.white)
+                
+            }.ignoresSafeArea()
+            
+            
+        }
+    }
+    
     // Вынести в отдельную структуру (пока не рабоатет)
     //    struct HistoryCard: View {
     //       @Binding var zone: String
