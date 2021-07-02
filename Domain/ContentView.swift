@@ -29,8 +29,8 @@ class TextBindingManager: ObservableObject {
     }
 }
 
-struct HistoryData: Hashable, Identifiable {
-    let id = UUID()
+struct HistoryData: Hashable, Identifiable, Codable {
+    var id = UUID()
     let domain: String
     let zone: String
     let length: String
@@ -119,6 +119,29 @@ struct ContentView: View {
                             .padding(.bottom, 24)
                             // Find Button
                             Button(action: {
+                                let defaults = UserDefaults.standard
+
+                                    let dictionary = defaults.dictionaryRepresentation()
+                                        //print(dictionary)
+                                    dictionary.keys.forEach { key in
+                                        defaults.removeObject(forKey: key)
+                                    }
+                                    print("user defaults - clear")
+                                    history = []
+                                    print("history - clean")
+                            }, label: {
+                                Text("clear userdefaults")
+
+                            })
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            
+                            .padding()
+                            
+                            
+            
+                            Button(action: {
                                 isLoading = true
                                 let input = textBindingManager.text.map {$0}
                                 var mask = ""
@@ -151,15 +174,62 @@ struct ContentView: View {
                                     isLoading = false
                                     
                                     let toHistory = HistoryData(domain: searchDomainName, zone: searchZone, length: searchLength)
-                                    history.append(toHistory)
+                                    
+                                    
+                                    let defaults = UserDefaults.standard
+                                    if let hasHistory = defaults.object(forKey: "history") as? Data {
+                                        print("has history user defaults")
+                                        var data = [HistoryData]()
+                                        
+                                        let encoder = JSONEncoder()
+                                        let decoder = JSONDecoder()
+                                        
+                                        if let loadedHistory = try? decoder.decode([HistoryData].self, from: hasHistory) {
+                                            print("раскодированы user defaults")
+                                            print(loadedHistory)
+                                            data = loadedHistory
+                                        }
+                                        
+                                        data.append(toHistory)
+                                        self.history = data
+  
+                                        if let encoded = try? encoder.encode(self.history) {
+                                            defaults.set(encoded, forKey: "history")
+                                            print("Записано все что есть из self.histor в user defaults")
+                                        }
+                                        
+                                    } else {
+                                        print("hasn't history in user defaults")
+                                        let encoder = JSONEncoder()
+                                        if let encoded = try? encoder.encode(toHistory) {
+                                            print("encoded введенных данных")
+                                            defaults.set(encoded, forKey: "history")
+                                            print("данные записаны в user defaults")
+                                        }
+                                        
+                                        // повтор из того, что есть
+                                        if let hasHistory = defaults.object(forKey: "history") as? Data {
+                                            print("has history user defaults")
+                                            let decoder = JSONDecoder()
+                                            if let loadedHistory = try? decoder.decode(HistoryData.self, from: hasHistory) {
+                                                print("раскодированы user defaults")
+                                                self.history.append(loadedHistory)
+                                                print("Записано все что есть в self.histor")
+                                            }
+                                            
+                                            let encoder = JSONEncoder()
+                                            if let encoded = try? encoder.encode(self.history) {
+                                                defaults.set(encoded, forKey: "history")
+                                                print("Записано все что есть из self.histor в user defaults")
+                                            }
+                                        }
+                                    }
                                 }
-                                
-                                
-                                
                             }, label: {
                                 Text("Найти")
                             })
-                            .frame(width: 328, height: 48, alignment: .center)
+                            .frame(height: 48, alignment: .center)
+                            .frame(maxWidth: 328)
                             .background(Color.black)
                             .foregroundColor(.white)
                             .font(.system(size: 17, weight: .bold))
@@ -299,6 +369,19 @@ struct ContentView: View {
             // loader
             if isLoading {Loader()}
         }
+        .onAppear(){
+            let defaults = UserDefaults.standard
+            if let hasHistory = defaults.object(forKey: "history") as? Data {
+                
+                let decoder = JSONDecoder()
+                
+                if let loadedHistory = try? decoder.decode([HistoryData].self, from: hasHistory) {
+                    self.history = loadedHistory
+                }
+            } else {
+                self.history = []
+            }
+        }
     }
     
     struct ContentView_Previews: PreviewProvider {
@@ -382,46 +465,46 @@ struct ContentView: View {
         }
     }
     // Вынести в отдельную структуру (пока не рабоатет)
-//    struct HistoryCard: View {
-//       @Binding var zone: String
-//        @Binding var domain: String
-//        @Binding var length: String
-//
-//        var body: some View {
-//            VStack (alignment: .leading) {
-//                Text("h00")
-//                    .font(.system(size: 20, weight: .bold))
-//                Spacer()
-//                HStack {
-//                    VStack (alignment: .leading) {
-//                        Text("Зона")
-//                            .font(.system(size: 11, weight: .light))
-//                        Text(".com")
-//                            .font(.system(size: 12, weight: .medium))
-//                    }
-//                    Spacer()
-//                    VStack (alignment: .leading) {
-//                        Text("Длина")
-//                            .font(.system(size: 11, weight: .light))
-//                        Text("4")
-//                            .font(.system(size: 12, weight: .medium))
-//                    }
-//                    Spacer()
-//                }
-//            }
-//            .foregroundColor(.white)
-//            .padding(16)
-//            .frame(width: 146, height: 95, alignment: .leading)
-//            .background(
-//                ZStack {
-//                    LinearGradient(gradient: Gradient(colors: [Color(#colorLiteral(red: 0.6156862745, green: 0.4705882353, blue: 0.8392156863, alpha: 1)), Color(#colorLiteral(red: 0.3058823529, green: 0.2431372549, blue: 0.7058823529, alpha: 1))]), startPoint: .topLeading, endPoint: .bottomTrailing)
-//                    Image("overlay")
-//                }
-//            )
-//            .cornerRadius(8)
-//
-//        }
-//    }
+    //    struct HistoryCard: View {
+    //       @Binding var zone: String
+    //        @Binding var domain: String
+    //        @Binding var length: String
+    //
+    //        var body: some View {
+    //            VStack (alignment: .leading) {
+    //                Text("h00")
+    //                    .font(.system(size: 20, weight: .bold))
+    //                Spacer()
+    //                HStack {
+    //                    VStack (alignment: .leading) {
+    //                        Text("Зона")
+    //                            .font(.system(size: 11, weight: .light))
+    //                        Text(".com")
+    //                            .font(.system(size: 12, weight: .medium))
+    //                    }
+    //                    Spacer()
+    //                    VStack (alignment: .leading) {
+    //                        Text("Длина")
+    //                            .font(.system(size: 11, weight: .light))
+    //                        Text("4")
+    //                            .font(.system(size: 12, weight: .medium))
+    //                    }
+    //                    Spacer()
+    //                }
+    //            }
+    //            .foregroundColor(.white)
+    //            .padding(16)
+    //            .frame(width: 146, height: 95, alignment: .leading)
+    //            .background(
+    //                ZStack {
+    //                    LinearGradient(gradient: Gradient(colors: [Color(#colorLiteral(red: 0.6156862745, green: 0.4705882353, blue: 0.8392156863, alpha: 1)), Color(#colorLiteral(red: 0.3058823529, green: 0.2431372549, blue: 0.7058823529, alpha: 1))]), startPoint: .topLeading, endPoint: .bottomTrailing)
+    //                    Image("overlay")
+    //                }
+    //            )
+    //            .cornerRadius(8)
+    //
+    //        }
+    //    }
     
     struct DropDownDomainZone: View {
         @State var isExpand = false
