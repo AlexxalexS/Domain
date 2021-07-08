@@ -142,7 +142,15 @@ struct ContentView: View {
                                     list = "free"
                                 }
                                 
-                                Api().getPosts(mask: mask, zone: selectedDomainZone, length: String(textBindingManager.domainLength), list: list) { (domains) in
+                                Api().getPosts(
+                                    mask: mask,
+                                    zone: selectedDomainZone,
+                                    length: String(textBindingManager.domainLength),
+                                    list: list,
+                                    no_digit: filterNumber,
+                                    no_dash: filterDash,
+                                    no_alpha: filterWords
+                                ) { (domains) in
                                     self.domainNames = domains.response.items.map {$0.domain}
                                     self.damainCountResult = domains.response.count
                                     //print(self.domainNames)
